@@ -1,7 +1,10 @@
+import * as dotenv from 'dotenv';
 import { PrivateConfig } from 'src/interfaces/Config';
 import { BadRequestError, NotFoundError } from 'src/interfaces/Errors';
 import { describe, expect, test } from 'vitest';
 import { AlbumManager } from './AlbumManager';
+
+dotenv.config();
 
 const api = {
   clientCredentials: {
@@ -107,7 +110,7 @@ describe('AlbumManager.list', () => {
   test('Get 100 of the same albums in list', async () => {
     const albums = await albumManager.list(Array(100).fill('2RHPZEe6gRPxeqj0KfV3fX'));
     expect(albums.length).eq(100);
-  });
+  }, 10000);
 
   test('Get 1 album with invalid ID', async () => {
     try {
@@ -142,6 +145,68 @@ describe('AlbumManager.list', () => {
       expect(e.name).eq('BadRequestError');
       expect(e.message).contain('"status": 400');
       expect(e.message).contain('"message": "invalid id"');
+    }
+  });
+});
+
+describe('AlbumManager.tracks', () => {
+  test('Get valid album by ID with 20 tracks', async () => {
+    const tracks = await albumManager.tracks('5Z9iiGl2FcIfa3BMiv6OIw');
+    expect(tracks.items.length).eq(10);
+    expect(tracks.total).eq(10);
+    expect(tracks.items[0].name).eq('Never Gonna Give You Up');
+    expect(tracks.href).contains('5Z9iiGl2FcIfa3BMiv6OIw');
+    expect(tracks.limit).eq(20);
+    expect(tracks.next).eq(null);
+    expect(tracks.offset).eq(0);
+    expect(tracks.previous).eq(null);
+  });
+
+  test('Get valid album by ID with "0" as options ', async () => {
+    const tracks = await albumManager.tracks('3xoAUqjKs7Ps7wR26VAMbq', {
+      offset: 0,
+      limit: 0
+    });
+    expect(tracks.offset).eq(0);
+    expect(tracks.total).eq(16);
+    expect(tracks.limit).eq(20);
+    expect(tracks.items.length).eq(16);
+  });
+
+  test('Get valid album by with 3 offset', async () => {
+    const tracks = await albumManager.tracks('1qwlxZTNLe1jq3b0iidlue', {
+      offset: 3
+    });
+    expect(tracks.offset).eq(3);
+    expect(tracks.total).eq(15);
+    expect(tracks.items.length).eq(12);
+    expect(tracks.limit).eq(20);
+  });
+
+  test('Get valid album with limit 50 and offset 500', async () => {
+    const tracks = await albumManager.tracks('0Vzr3HlSCCACpfENH4y1jC', {
+      offset: 500,
+      limit: 50
+    });
+    expect(tracks.limit).eq(50);
+    expect(tracks.offset).eq(500);
+    expect(tracks.total).eq(1330);
+    expect(tracks.next).contains('0Vzr3HlSCCACpfENH4y1jC');
+    expect(tracks.next).contains('offset=550');
+    expect(tracks.next).contains('limit=50');
+    expect(tracks.next).contains('0Vzr3HlSCCACpfENH4y1jC');
+    expect(tracks.previous).contains('offset=450');
+    expect(tracks.previous).contains('limit=50');
+    expect(tracks.items.length).eq(50);
+  });
+
+  test('Get valid album with limit 51', async () => {
+    try {
+      await albumManager.tracks('6LW1VUihmMg6qAM3tUPXFe', { limit: 51 });
+    } catch (error) {
+      const e: BadRequestError = error;
+      expect(e.name).eq('BadRequestError');
+      expect(e.message).contains('Invalid limit, cannot be greater than 50');
     }
   });
 });

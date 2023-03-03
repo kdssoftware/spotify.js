@@ -48,7 +48,7 @@ export class AlbumManager extends Manager {
       offset: options?.offset ? options.offset.toString() : '0'
     };
 
-    if (options.market) query.market = options.market;
+    if (options?.market) query.market = options.market;
 
     const res = await this.http.get(`/albums/${id}/tracks`, { query });
 
